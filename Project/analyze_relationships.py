@@ -2,12 +2,11 @@ import pandas as pd
 from pathlib import Path
 import math
 
-# Parameters
-THRESHOLD = 0.5  # absolute correlation threshold to consider "strong"
-MIN_WINDOW = 2   # months
-MAX_WINDOW = 12  # months
+# Parameters(Things I have set)
+THRESHOLD = 0.5  # strong correlation
+MIN_WINDOW = 2   # 2 months
+MAX_WINDOW = 12  # 12 months
 TOP_N = 15       # top N windows to print across all window sizes
-
 
 def load_and_prepare():
     script_dir = Path(__file__).resolve().parent
@@ -16,10 +15,11 @@ def load_and_prepare():
     sahm = sahm.set_index('observation_date')
 
     gold = pd.read_csv(script_dir / 'XAU_USD Historical Data.csv', quotechar='"')
+    
     # normalize column names
-    # Accept 'Date' and 'Price' as in file
     if 'Date' not in gold.columns:
         raise ValueError('Gold CSV missing Date column')
+    
     # keep Date and Price/Value
     if 'Price' in gold.columns:
         gold = gold[['Date', 'Price']]
@@ -27,7 +27,6 @@ def load_and_prepare():
         gold = gold[['Date', 'Value']]
         gold = gold.rename(columns={'Value': 'Price'})
     else:
-        # pick second column
         cols = [c for c in gold.columns if c.lower() != 'date']
         gold = gold[['Date', cols[0]]]
         gold = gold.rename(columns={cols[0]: 'Price'})
@@ -53,17 +52,17 @@ def load_and_prepare():
     return merged
 
 
+# Function that finds strong intervals of correlation(monthly rolling correlation)
 def find_strong_intervals(merged, threshold=THRESHOLD, min_w=MIN_WINDOW, max_w=MAX_WINDOW):
     results = []  # list of (window_months, end_index, start_date, end_date, corr_value)
 
     for w in range(min_w, max_w + 1):
-        # rolling correlation: result indexed like merged, value corresponds to window ending at that index
+        # result indexed like merged, value corresponds to window ending at that index
         corr_series = merged['SAHMREALTIME'].rolling(window=w).corr(merged['Gold_Price_Monthly_Avg'])
-        # find indices where abs(corr) >= threshold and not NaN
         cond = corr_series.abs() >= threshold
         cond = cond.fillna(False)
 
-        # compress consecutive True runs into intervals
+        # compress consecutive True runs to intervals
         runs = []
         run_start = None
         run_end = None
@@ -81,12 +80,10 @@ def find_strong_intervals(merged, threshold=THRESHOLD, min_w=MIN_WINDOW, max_w=M
             runs.append((run_start, run_end))
 
         idx = merged.index
-        for (s_idx, e_idx) in runs:
-            # for correlation ending at position i, window covers [i-w+1 .. i]
+        for (s_idx, e_idx) in runs: # correlation ending at position i, windows covers [i-w+1 .. i]
             start_date = idx[max(0, s_idx - w + 1)]
             end_date = idx[e_idx]
-            # average correlation over the run
-            avg_corr = corr_series.iloc[s_idx:e_idx + 1].mean()
+            avg_corr = corr_series.iloc[s_idx:e_idx + 1].mean() # average correlation over the run
             max_corr = corr_series.iloc[s_idx:e_idx + 1].max()
             min_corr = corr_series.iloc[s_idx:e_idx + 1].min()
             results.append({
@@ -99,7 +96,7 @@ def find_strong_intervals(merged, threshold=THRESHOLD, min_w=MIN_WINDOW, max_w=M
                 'min_corr': float(min_corr) if not math.isnan(min_corr) else None,
             })
 
-    # also compute top windows by absolute corr (single-window maxima)
+    # Compute top windows by absolute corr (single-window maxima)
     single_windows = []
     for w in range(min_w, max_w + 1):
         corr_series = merged['SAHMREALTIME'].rolling(window=w).corr(merged['Gold_Price_Monthly_Avg'])
@@ -125,8 +122,7 @@ if __name__ == '__main__':
     print('\nSummary of intervals with |corr| >= {:.2f} (window sizes {}-{} months):\n'.format(THRESHOLD, MIN_WINDOW, MAX_WINDOW))
     if not intervals:
         print('No intervals found exceeding the threshold.')
-    else:
-        # sort by avg_corr magnitude
+    else: # sort by avg_corr magnitude
         intervals_sorted = sorted(intervals, key=lambda x: abs(x['avg_corr']), reverse=True)
         for it in intervals_sorted:
             print(f"{it['window_months']:2d}m  {it['start_date']} -> {it['end_date']}  length={it['length_months']}m  avg_corr={it['avg_corr']:.3f}  max={it['max_corr']:.3f}  min={it['min_corr']:.3f}")
