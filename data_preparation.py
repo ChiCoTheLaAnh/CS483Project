@@ -1,5 +1,6 @@
 # Description: Main Data Processing Script
 # Loads SAHM and Gold data, processes it, merges it, computes correlation, and saves the final dataset.
+# Inputs: SAHMREALTIME.csv, XAU_USD Historical Data.csv
 # Outputs: SAHM_vs_Gold_Monthly.csv
 
 import pandas as pd
@@ -9,14 +10,18 @@ from pathlib import Path
 def process_and_analyze_data():
     try:
         script_dir = Path(__file__).resolve().parent # load SAHM REALTIME data
-        sahm_df = pd.read_csv(script_dir / "SAHMREALTIME.csv")
+        data_dir = script_dir / 'data'
+        if not data_dir.exists():
+            data_dir = script_dir
+
+        sahm_df = pd.read_csv(data_dir / "SAHMREALTIME.csv")
         sahm_df['observation_date'] = pd.to_datetime(sahm_df['observation_date'], format='%Y-%m-%d') # convert to datetime
         
         sahm_df = sahm_df.set_index('observation_date') # set data as the index
         print(sahm_df.head())
         print("-" * 30)
 
-        gold_candidates = [script_dir / "XAU_USD Historical Data.csv"]
+        gold_candidates = [data_dir / "XAU_USD Historical Data.csv"]
         gold_path = None
         for p in gold_candidates:
             if p.exists():

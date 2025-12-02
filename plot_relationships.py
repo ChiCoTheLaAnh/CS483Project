@@ -13,11 +13,15 @@ import numpy as np
 
 def load_and_prepare():
     script_dir = Path(__file__).resolve().parent
-    sahm = pd.read_csv(script_dir / 'SAHMREALTIME.csv')
+    data_dir = script_dir / 'data'
+    if not data_dir.exists():
+        data_dir = script_dir
+
+    sahm = pd.read_csv(data_dir / 'SAHMREALTIME.csv')
     sahm['observation_date'] = pd.to_datetime(sahm['observation_date'])
     sahm = sahm.set_index('observation_date')
 
-    gold = pd.read_csv(script_dir / 'XAU_USD Historical Data.csv', quotechar='"')
+    gold = pd.read_csv(data_dir / 'XAU_USD Historical Data.csv', quotechar='"')
     gold['Date'] = pd.to_datetime(gold['Date'])
     if 'Price' in gold.columns:
         gold = gold[['Date', 'Price']]
