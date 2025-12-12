@@ -1,0 +1,17 @@
+{
+  "train_rmse": 10.2301139721614,
+  "test_rmse": 8.458163819542449,
+  "train_mae": 6.289546826374465,
+  "test_mae": 6.153319653946225,
+  "test_split": 0.2,
+  "random_seed": 42,
+  "gb_params": {
+    "n_estimators": 200,
+    "learning_rate": 0.01,
+    "max_depth": 3,
+    "subsample": 0.7
+  },
+  "data_path": "data/model_ready_dataset.csv",
+  "timestamp": "2025-12-11T22:53:08.299559",
+  "previous_best_rmse": 8.5126
+}

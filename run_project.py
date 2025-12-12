@@ -1,4 +1,5 @@
 import os
+import sys
 import time
 from datetime import datetime
 
@@ -7,7 +8,8 @@ def run_script(script_name):
     print(f"\n{'='*50}")
     print(f">>> RUNNING: {script_name}")
     print(f"{'='*50}")
-    result = os.system(f"python {script_name}")
+    python_executable = sys.executable or "python3"
+    result = os.system(f"{python_executable} {script_name}")
     if result != 0:
         print(f"ERROR: {script_name} failed. Stopping execution.")
         exit(1)

@@ -1,0 +1,6 @@
+{
+  "rmse": 9.343026966674133,
+  "mae": 6.894070000000004,
+  "test_size_ratio": 0.2,
+  "data_path": "data/master_dataset.csv"
+}
