@@ -1,12 +1,13 @@
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-from sklearn.metrics import mean_squared_error, mean_absolute_error
+import json
 import os
 
-# --- CONFIGURATION ---
-DATA_PATH = os.path.join('data', 'master_dataset.csv')
-TEST_SIZE_RATIO = 0.2
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+from sklearn.metrics import mean_absolute_error, mean_squared_error
+
+from config import load_config
+
 
 def evaluate_forecast(y_true, y_pred):
     mse = mean_squared_error(y_true, y_pred)
@@ -14,36 +15,35 @@ def evaluate_forecast(y_true, y_pred):
     mae = mean_absolute_error(y_true, y_pred)
     return rmse, mae
 
-def main():
+
+def main(cfg=None):
+    cfg = cfg or load_config()
     print("--- Running Baseline Random Walk Model ---", flush=True)
-    
-    # 1. Load the fixed Master Dataset
-    if not os.path.exists(DATA_PATH):
-        print(f"ERROR: Could not find {DATA_PATH}")
+
+    data_path = cfg.master_path
+    if not os.path.exists(data_path):
+        print(f"ERROR: Could not find {data_path}")
         return
 
     try:
-        df = pd.read_csv(DATA_PATH, index_col=0, parse_dates=True)
+        df = pd.read_csv(data_path, index_col=0, parse_dates=True)
     except Exception as e:
         print(f"Error reading CSV: {e}")
         return
 
-    # 2. Setup Data
     prices = df['Gold_Price']
-    split_index = int(len(prices) * (1 - TEST_SIZE_RATIO))
+    split_index = int(len(prices) * (1 - cfg.test_size_ratio))
     train_data = prices[:split_index]
     test_data = prices[split_index:]
-    
+
     print(f"Training Samples: {len(train_data)}")
     print(f"Testing Samples: {len(test_data)}")
 
-    # 3. Random Walk Prediction (Predict t using t-1)
     predictions = test_data.shift(1)
     predictions.iloc[0] = train_data.iloc[-1]
 
-    # 4. Calculate RMSE
     rmse, mae = evaluate_forecast(test_data, predictions)
-    
+
     print("-" * 30)
     print("BASELINE MODEL RESULTS")
     print("-" * 30)
@@ -51,15 +51,27 @@ def main():
     print(f"Mean Absolute Error (MAE): {mae:.4f}")
     print("-" * 30)
 
-    # 5. Plot
     plt.figure(figsize=(12, 6))
     plt.plot(test_data.index, test_data.values, label='Actual Price', color='blue')
     plt.plot(test_data.index, predictions.values, label='Random Walk', color='red', linestyle='--')
     plt.title('Baseline Model: Random Walk vs Actual')
     plt.legend()
     plt.grid(True)
-    plt.savefig('baseline_results.png')
-    print("Plot saved as baseline_results.png")
+    baseline_plot = os.path.join(cfg.run_output_dir, 'baseline_results.png')
+    plt.savefig(baseline_plot)
+    print(f"Plot saved as {baseline_plot}")
+
+    metrics = {
+        "rmse": rmse,
+        "mae": mae,
+        "test_size_ratio": cfg.test_size_ratio,
+        "data_path": data_path,
+    }
+    metrics_path = os.path.join(cfg.run_output_dir, 'baseline_metrics.json')
+    with open(metrics_path, 'w', encoding='utf-8') as f:
+        json.dump(metrics, f, indent=2)
+    print(f"Metrics saved to {metrics_path}")
+
 
 if __name__ == "__main__":
     main()
